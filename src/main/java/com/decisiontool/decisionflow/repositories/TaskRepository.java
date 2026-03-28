@@ -1,0 +1,50 @@
+package com.decisiontool.decisionflow.repositories;
+
+import com.decisiontool.decisionflow.entities.Task;
+import com.decisiontool.decisionflow.entities.Department;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface TaskRepository extends JpaRepository<Task, Long> {
+    // Задачи, созданные конкретным аналитиком
+    List<Task> findAllByCreatorId(Long creatorId);
+    // Задачи, назначенные разработчику
+    List<Task> findAllByAssigneeId(Long assigneeId);
+    // Список задач по статусу (например, "TODO" или "IN_PROGRESS")
+    List<Task> findAllByStatus(String status);
+
+    // 1. Активные задачи (те, что в процессе И еще не завершены)
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.assignee.id = :devId " +
+           "AND t.status = 'IN_PROGRESS' AND t.updatedAt IS NULL")
+    long countActiveTasksByDeveloperId(@Param("devId") Long devId);
+
+    // 2. ТОП-3 департамента (только по реально ЗАВЕРШЕННЫМ задачам)
+    @Query(value = """
+        SELECT d.name FROM departments d 
+        JOIN tasks t ON t.department_id = d.id 
+        WHERE t.assignee_id = :devId 
+        AND t.updated_at IS NOT NULL 
+        GROUP BY d.name 
+        ORDER BY COUNT(t.id) DESC LIMIT 3
+    """, nativeQuery = true)
+    List<String> findTopDepartmentsByDeveloperId(@Param("devId") Long devId);
+
+    // 3. Средняя скорость (только там, где есть обе даты для расчета)
+    @Query(value = """
+        SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600) 
+        FROM tasks 
+        WHERE assignee_id = :devId 
+        AND updated_at IS NOT NULL
+    """, nativeQuery = true)
+    Double getAvgVelocityByDeveloperId(@Param("devId") Long devId);
+
+    @Query("SELECT t.assignee.id, COUNT(t) FROM Task t WHERE t.completedAt IS NOT NULL GROUP BY t.assignee.id")
+    List<Object[]> countAllActiveTasks();
+
+    @Query("SELECT t FROM Task t WHERE t.assignee.username = :username")
+    List<Task> findAllByAssigneeUsername(@Param("username") String username);
+}

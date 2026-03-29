@@ -52,23 +52,33 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        
-        // 1. Проверяем логин и пароль
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(), 
-                    loginRequest.getPassword()
-                )
-        );
+public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    
+    // 1. Проверяем логин и пароль
+    Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                loginRequest.getUsername(), 
+                loginRequest.getPassword()
+            )
+    );
 
-        // 2. Если всё ок, сохраняем сессию в контексте (на время запроса)
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        
-        // 3. Генерируем токен
-        String jwt = jwtUtils.generateToken(authentication);
-        
-        // 4. Возвращаем токен фронтенду
-        return ResponseEntity.ok(new JwtResponse(jwt, loginRequest.getUsername()));
-    }
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+    
+    // 2. Генерируем токен
+    String jwt = jwtUtils.generateToken(authentication);
+    
+    // 3. Получаем объект пользователя из базы или из Principal
+    // Предположим, у тебя есть UserRepository
+    User user = userRepository.findByUsername(loginRequest.getUsername())
+    .orElseThrow(() -> new RuntimeException("Ошибка: Пользователь не найден в БД после аутентификации"));
+    
+    // 4. Возвращаем всё вместе
+    return ResponseEntity.ok(new JwtResponse(
+        jwt, 
+        user.getUsername(), 
+        user.getEmail(), 
+        user.getFullName(), 
+        user.getId()
+    ));
+}
 }

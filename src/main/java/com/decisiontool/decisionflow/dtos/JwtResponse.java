@@ -8,4 +8,7 @@ import lombok.Data;
 public class JwtResponse {
     private String token;
     private String username;
+    private String email;
+    private String fullName;
+    private Long id;
 }

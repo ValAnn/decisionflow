@@ -6,6 +6,8 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 @Entity
 @Table(name = "tasks")
 @Getter @Setter
@@ -41,6 +43,10 @@ public class Task {
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
+    @ManyToOne
+    @JoinColumn(name = "developer_id")
+    private User developer;
+
     // Лид (Утверждающий)
     @ManyToOne
     @JoinColumn(name = "lead_id")
@@ -51,14 +57,21 @@ public class Task {
     private Long departmentId;
 
     @Column(name = "created_at")
+    // @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "completed_at")
+    // @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime completedAt;
 
     @Column(name = "updated_at")
+    // @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime updatedAt;
 
     @Column(name = "spent_hours")
     private Integer spentHours;
+
+    @Column(name = "deadline_at")
+    // @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDateTime deadlineAt;
 }

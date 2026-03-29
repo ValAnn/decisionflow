@@ -47,4 +47,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT t FROM Task t WHERE t.assignee.username = :username")
     List<Task> findAllByAssigneeUsername(@Param("username") String username);
+
+    @Query("SELECT t FROM Task t WHERE t.creator.username = :username")
+    List<Task> findAllByCreatorUsername(@Param("username") String username);
 }

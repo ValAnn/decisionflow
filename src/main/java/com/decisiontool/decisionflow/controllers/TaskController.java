@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -43,5 +44,29 @@ public class TaskController {
         String username = authentication.getName();
         return ResponseEntity.ok(taskService.getTaskByUsername(username));
     }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Task> updateTaskStatus(
+            @PathVariable Long id, 
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) {
+        
+        String newStatus = payload.get("status");
+        String currentUsername = authentication.getName();
+
+        // Контроллер делегирует всю работу сервису
+        Task updatedTask = taskService.changeTaskStatus(id, newStatus, currentUsername);
+        
+        return ResponseEntity.ok(updatedTask);
+    }
+
+    @GetMapping("/{id}")
+public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+    // Вызываем метод сервиса
+    Task task = taskService.getTaskById(id);
     
+    // Возвращаем задачу и статус 200 OK
+    return ResponseEntity.ok(task);
 }
+}
+    

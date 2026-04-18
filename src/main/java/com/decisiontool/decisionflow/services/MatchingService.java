@@ -1,36 +1,55 @@
 package com.decisiontool.decisionflow.services;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import com.decisiontool.decisionflow.entities.DeveloperProfile;
+import com.decisiontool.decisionflow.entities.Task;
+import com.decisiontool.decisionflow.repositories.TaskRepository;
+
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class MatchingService {
 
-    private final RestTemplate restTemplate;
-    // URL твоего запущенного FastAPI
-    private final String PYTHON_SERVICE_URL = "http://localhost:8000/predict";
+    @Autowired
+    private TaskRepository taskRepository;
 
-    public double predictMatchingScore(Long taskId, Long developerId) {
-        // Формируем JSON-запрос для Python
-        Map<String, Object> request = Map.of(
-            "task_id", taskId,
-            "developer_id", developerId
-        );
-
-        try {
-            // Отправляем POST запрос и получаем ответ в виде Map
-            Map<String, Object> response = restTemplate.postForObject(PYTHON_SERVICE_URL, request, Map.class);
-
-            if (response != null && response.containsKey("match_percent")) {
-                return (Double) response.get("match_percent");
-            }
-        } catch (Exception e) {
-            System.err.println("Ошибка при вызове Python ML сервиса: " + e.getMessage());
+    public double calculateMatch(DeveloperProfile profile, Task task) {
+        // 1. Специализация (60%)
+        double specScore = 0;
+        if (profile.getSpecialization() != null && 
+            profile.getSpecialization().getName().equals(task.getRequiredSpecialization())) {
+            specScore = 1.0;
         }
 
-        return 0.0; // Возвращаем 0, если сервис недоступен
+        // 2. Свободные часы (20%)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime twoWeeksOut = now.plusDays(14);
+        Integer busyHours = taskRepository.sumPlannedHours(profile.getUserId(), now, twoWeeksOut);
+        if (busyHours == null) busyHours = 0;
+        
+        // Норма нагрузки 80ч на 2 недели. Если занято 0ч -> балл 1.0, если 80ч+ -> балл 0.
+        double loadScore = Math.max(0, (80.0 - busyHours) / 80.0);
+
+        // 3. Грейд (10%)
+        double gradeScore = switch (profile.getGrade().toUpperCase()) {
+            case "SENIOR" -> 1.0;
+            case "MIDDLE" -> 0.7;
+            case "JUNIOR" -> 0.4;
+            default -> 0.5;
+        };
+
+        // 4. Дополнительные теги (10%)
+        double tagsScore = 0.5; 
+
+        double finalScore = (specScore * 0.6) + (loadScore * 0.2) + (gradeScore * 0.1) + (tagsScore * 0.1);
+        
+        return Math.min(100, Math.round(finalScore * 100.0));
     }
 }

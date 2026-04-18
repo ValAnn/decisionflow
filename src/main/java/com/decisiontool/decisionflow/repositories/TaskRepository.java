@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -50,4 +52,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT t FROM Task t WHERE t.creator.username = :username")
     List<Task> findAllByCreatorUsername(@Param("username") String username);
+
+    @Query("SELECT CASE WHEN COUNT(t) = 0 THEN 0.0 ELSE " +
+       "(SUM(CASE WHEN t.status = 'DONE' THEN 1.0 ELSE 0.0 END) * 100.0 / COUNT(t)) END " +
+       "FROM Task t WHERE t.departmentId = :deptId AND t.assignee.id = :userId")
+Double getCompletionPercentage(@Param("deptId") Long deptId, @Param("userId") Long userId);
+
+    @Query("SELECT SUM(t.spentHours) FROM Task t " +
+       "WHERE t.assignee.id = :userId " +
+       "AND t.deadlineAt BETWEEN :start AND :end")
+Integer sumPlannedHours(@Param("userId") Long userId, 
+                        @Param("start") LocalDateTime start, 
+                        @Param("end") LocalDateTime end);
 }

@@ -28,9 +28,6 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
-    /**
-     * Пример использования нашего интеллектуального модуля
-     */
     public void getRecommendation(Long taskId, Long devId) {
         double score = matchingService.predictMatchingScore(taskId, devId);
         System.out.println("Рекомендация для задачи: " + score + "%");
@@ -40,7 +37,7 @@ public class TaskService {
         return taskRepository.findAllByAssigneeUsername(username);
     }
 
-    @Transactional // Важно для изменения данных
+    @Transactional 
     public Task changeTaskStatus(Long taskId, String newStatus, String username) {
         // 1. Ищем задачу
         Task task = taskRepository.findById(taskId)

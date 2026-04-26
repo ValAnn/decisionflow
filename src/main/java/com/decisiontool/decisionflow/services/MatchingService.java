@@ -8,6 +8,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.decisiontool.decisionflow.entities.DeveloperProfile;
 import com.decisiontool.decisionflow.entities.Task;
+import com.decisiontool.decisionflow.repositories.DeveloperRepository;
 import com.decisiontool.decisionflow.repositories.TaskRepository;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,8 @@ public class MatchingService {
 
     @Autowired
     private TaskRepository taskRepository;
+    private DeveloperRepository developerRepository;
+
 
     public double calculateMatch(DeveloperProfile profile, Task task) {
         // 1. Специализация (60%)
@@ -34,7 +37,6 @@ public class MatchingService {
         Integer busyHours = taskRepository.sumPlannedHours(profile.getUserId(), now, twoWeeksOut);
         if (busyHours == null) busyHours = 0;
         
-        // Норма нагрузки 80ч на 2 недели. Если занято 0ч -> балл 1.0, если 80ч+ -> балл 0.
         double loadScore = Math.max(0, (80.0 - busyHours) / 80.0);
 
         // 3. Грейд (10%)
@@ -51,5 +53,12 @@ public class MatchingService {
         double finalScore = (specScore * 0.6) + (loadScore * 0.2) + (gradeScore * 0.1) + (tagsScore * 0.1);
         
         return Math.min(100, Math.round(finalScore * 100.0));
+    }
+
+    public double predictMatchingScore(Long profileId, Long taskId){
+        DeveloperProfile profile = developerRepository.findById(profileId).get();
+        Task task = taskRepository.findById(taskId).get();
+
+        return calculateMatch(profile,task);
     }
 }

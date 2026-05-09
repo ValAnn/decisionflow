@@ -34,6 +34,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
+    implementation ("org.springframework.boot:spring-boot-starter-webflux")
     // implementation("org.springframework.boot:spring-boot-starter-test")
 
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
@@ -45,6 +46,10 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.projectlombok:lombok")
     
+
+    testImplementation ("org.springframework.boot:spring-boot-starter-test")
+    testImplementation ("io.projectreactor:reactor-test")  // для тестирования WebClient
+    testImplementation ("com.squareup.okhttp3:mockwebserver:4.12.0")
     // testImplementation("org.springframework.boot:spring-boot-starter-test")
     // testImplementation("org.springframework.security:spring-security-test")
     // testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -58,4 +63,13 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed", "standardOut", "standardError")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }

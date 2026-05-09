@@ -33,24 +33,17 @@ public class Task {
     @Column(name = "required_specialization")
     private String requiredSpecialization; // Для нашей логики подбора
 
-    // Аналитик (Создатель)
+    @ManyToOne
+    @JoinColumn(name = "analyst_id")
+    private User analyst; // Тот самый аналитик из customfield_10071
+
     @ManyToOne
     @JoinColumn(name = "creator_id")
-    private User creator;
+    private User creator; // Тот, кто создал задачу в Jira (Reporter)
 
-    // Разработчик (Исполнитель)
     @ManyToOne
     @JoinColumn(name = "assignee_id")
-    private User assignee;
-
-    @ManyToOne
-    @JoinColumn(name = "developer_id")
-    private User developer;
-
-    // Лид (Утверждающий)
-    @ManyToOne
-    @JoinColumn(name = "lead_id")
-    private User lead;
+    private User assignee; // Разработчик, которого назначит аналитик
 
     // Ссылка на департамент (создадим сущность Department позже или используем String)
     @Column(name = "department_id")

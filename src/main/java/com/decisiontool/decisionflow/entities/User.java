@@ -28,7 +28,12 @@ public class User {
     @Column(name = "jira_id") // Новое общее поле
     private String jiraId;
 
+    @Column(name = "jira_account_id")
+    private String jiraAccountId;
+
     @ManyToOne
     @JoinColumn(name = "role_id")
     private Role role;
+
+    
 }

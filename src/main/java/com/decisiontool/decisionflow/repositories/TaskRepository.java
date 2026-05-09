@@ -19,6 +19,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // Список задач по статусу (например, "TODO" или "IN_PROGRESS")
     List<Task> findAllByStatus(String status);
 
+    List<Task> findByExternalJiraId(String jira_id);
+
     // 1. Активные задачи (те, что в процессе И еще не завершены)
     @Query("SELECT COUNT(t) FROM Task t WHERE t.assignee.id = :devId " +
            "AND t.status = 'IN_PROGRESS' AND t.updatedAt IS NULL")
@@ -64,4 +66,9 @@ Double getCompletionPercentage(@Param("deptId") Long deptId, @Param("userId") Lo
 Integer sumPlannedHours(@Param("userId") Long userId, 
                         @Param("start") LocalDateTime start, 
                         @Param("end") LocalDateTime end);
+    
+    List<Task> findAllByAnalystUsername(String username);
+
+    // Проверка, чтобы не дублировать задачи при повторном импорте
+    boolean existsByExternalJiraId(String externalJiraId);
 }

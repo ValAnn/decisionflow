@@ -1,5 +1,10 @@
 package com.decisiontool.decisionflow.entities;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,9 +24,19 @@ public class DeveloperProfile {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL)
+    private List<DeveloperSkill> skills = new ArrayList<>();
+
     private String grade;
 
-    @ManyToOne
-    @JoinColumn(name = "specialization_id")
-    private Skill specialization;
+    public Optional<Skill> getSpecialization() {
+    return this.skills.stream()
+            .filter(DeveloperSkill::isPrimary)
+            .map(DeveloperSkill::getSkill)
+            .findFirst(); // Берем первый найденный основной навык
+    }
+
+    // @ManyToOne
+    // @JoinColumn(name = "specialization_id")
+    // private Skill specialization;
 }

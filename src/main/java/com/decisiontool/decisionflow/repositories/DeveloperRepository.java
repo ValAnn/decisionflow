@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface DeveloperRepository extends JpaRepository<DeveloperProfile, Long> {
     // Найти всех разработчиков по основной специализации (Java, Vue и т.д.)
-    List<DeveloperProfile> findAllBySpecializationId(Long skillId);
+    // List<DeveloperProfile> findAllBySpecializationId(Long skillId);
 
     Optional<DeveloperProfile> findByUserId(Long userId);
 }

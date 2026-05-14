@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decisiontool.decisionflow.dtos.DeveloperProfileDTO;
 import com.decisiontool.decisionflow.entities.DeveloperProfile;
+import com.decisiontool.decisionflow.entities.Skill;
 import com.decisiontool.decisionflow.entities.User;
 import com.decisiontool.decisionflow.repositories.DeveloperRepository;
 import com.decisiontool.decisionflow.repositories.TaskRepository;
@@ -47,7 +48,9 @@ public class DeveloperController {
         DeveloperProfileDTO fullInfo = new DeveloperProfileDTO(
             user.getId(),
             user.getFullName(),
-            profile.getSpecialization().getName(), // Вот она, из нужной сущности!
+            profile.getSpecialization()
+                .map(Skill::getName)
+                .orElse("Не указано"), 
             workload,
             depts,
             velocity != null ? Math.round(velocity * 10.0) / 10.0 : 0.0
@@ -77,7 +80,9 @@ public class DeveloperController {
             return DeveloperProfileDTO.builder()
                 .id(user.getId())
                 .name(user.getFullName())
-                .specialization(profile.getSpecialization().getName())
+                .specialization(profile.getSpecialization()
+                    .map(Skill::getName)
+                    .orElse("Не указано"))
                 .currentWorkload(workload)
                 .topDepartments(depts)
                 .avgVelocityHours(velocity != null ? Math.round(velocity * 10.0) / 10.0 : 0.0)

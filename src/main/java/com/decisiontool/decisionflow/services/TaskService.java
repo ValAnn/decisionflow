@@ -1,7 +1,9 @@
 package com.decisiontool.decisionflow.services;
 
+import com.decisiontool.decisionflow.entities.Skill;
 import com.decisiontool.decisionflow.entities.Task;
 import com.decisiontool.decisionflow.entities.User;
+import com.decisiontool.decisionflow.repositories.SkillRepository;
 import com.decisiontool.decisionflow.repositories.TaskRepository;
 import com.decisiontool.decisionflow.repositories.UserRepository;
 
@@ -15,8 +17,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,8 @@ public class TaskService {
     private final UserRepository userRepository;
     private final MatchingService matchingService;
     private final JiraIntegrationService jiraIntegrationService;
+
+    private final SkillRepository skillRepository;
 
     public Task createTask(Task task) {
         return taskRepository.save(task);
@@ -109,59 +116,46 @@ public class TaskService {
     }
 
     @Transactional
-public void importTasksFromJira(String username) {
-    // 1. Находим текущего аналитика (кто делает запрос)
-    User currentAnalyst = userRepository.findByUsername(username)
-            .orElseThrow(() -> new EntityNotFoundException("Аналитик не найден"));
+    public void importTasksFromJira(String username) {
+        User currentAnalyst = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Аналитик не найден"));
 
-    // 2. Запрашиваем задачи у Jira
-    List<Map<String, Object>> jiraIssues = jiraIntegrationService.getIssuesForAnalyst(currentAnalyst.getJiraAccountId());
+        List<Map<String, Object>> jiraIssues = jiraIntegrationService.getIssuesForAnalyst(currentAnalyst.getJiraAccountId());
 
-    for (Map<String, Object> issue : jiraIssues) {
-        String key = (String) issue.get("key"); // Например, "KAN-4"
-
-        // Проверяем, нет ли уже такой задачи в нашей базе
-        if (!taskRepository.existsByExternalJiraId(key)) {
+        for (Map<String, Object> issue : jiraIssues) {
+            String key = (String) issue.get("key");
             Map<String, Object> fields = (Map<String, Object>) issue.get("fields");
-            
-            Task newTask = new Task();
-            newTask.setExternalJiraId(key);
-            
-            // Берем название задачи
-            newTask.setTitle((String) fields.get("summary"));
 
-            //description
-            String descriptionText = parseJiraDescription(fields.get("description"));
-            newTask.setDescription(descriptionText); // Предполагаем, что в Task есть поле description
-            
-            //priority
-            Map<String, Object> priorityMap = (Map<String, Object>) fields.get("priority");
-            String priority = (String) priorityMap.get("name");
-            newTask.setPriority(priority.toUpperCase()); 
+            // Ищем существующую задачу по ключу или создаем новую
+            Task task = taskRepository.findByExternalJiraId(key)
+                    .orElseGet(() -> {
+                        Task t = new Task();
+                        t.setExternalJiraId(key);
+                        t.setAnalyst(currentAnalyst);
+                        return t;
+                    });
 
-            // Извлекаем название статуса: fields -> status -> name
-            Map<String, Object> statusMap = (Map<String, Object>) fields.get("status");
-            if (statusMap != null) {
-                String jiraStatus = (String) statusMap.get("name");
-                // Можно маппить статусы Jira на свои, например:
-                newTask.setStatus(jiraStatus.toUpperCase()); 
-            } else {
-                newTask.setStatus("TODO");
-            }
+            // Используем общий метод маппинга
+            mapJiraFieldsToTask(task, fields);
             
-            // Назначаем аналитика, под которым залогинены
-            newTask.setAnalyst(currentAnalyst); 
-            
-            // Если нужно проверить Исполнителя (Assignee) из Jira
-            Map<String, Object> assignee = (Map<String, Object>) fields.get("assignee");
-            if (assignee != null) {
-                // Если в будущем нужно будет связывать исполнителя — логика будет тут
-                // String assigneeName = (String) assignee.get("displayName");
-            }
-
-            taskRepository.save(newTask);
+            taskRepository.save(task);
         }
+
     }
+
+    @Transactional
+public Task syncSingleTaskWithJira(Long taskId) {
+    Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new EntityNotFoundException("Задача не найдена"));
+
+    // // Получаем данные из Jira по ключу (например, KAN-1)
+    // Map<String, Object> response = jiraIntegrationService.getIssueByKey(task.getExternalJiraId());
+    // Map<String, Object> fields = (Map<String, Object>) response.get("fields");
+
+    // // Используем ТОТ ЖЕ самый метод маппинга
+    // mapJiraFieldsToTask(task, fields);
+
+    return taskRepository.save(task);
 }
 
 public List<Task> getTasksByAnalyst(String username) {
@@ -196,6 +190,41 @@ private String parseJiraDescription(Object descriptionObj) {
     } catch (Exception e) {
         // Если структура изменится или будет пустой, возвращаем пустую строку
         return "";
+    }
+}
+
+private void mapJiraFieldsToTask(Task task, Map<String, Object> fields) {
+    // 1. Основные текстовые поля
+    task.setTitle((String) fields.get("summary"));
+    task.setDescription(parseJiraDescription(fields.get("description")));
+    
+    // 2. Статус
+    Map<String, Object> statusMap = (Map<String, Object>) fields.get("status");
+    if (statusMap != null) {
+        task.setStatus(((String) statusMap.get("name")).toUpperCase());
+    }
+
+    // 3. Департамент и Специализация (наши кастомные поля)
+    Map<String, Object> dept = (Map<String, Object>) fields.get("customfield_10072");
+    if (dept != null) {
+        // Здесь можно либо сетить строку, либо искать в таблице departments
+        // Для простоты пока предположим, что в Task есть строковое поле
+        task.setRequiredSpecialization((String) dept.get("value")); 
+    }
+
+    // 4. Синхронизация скиллов (Labels) — Твоя новая связь Many-to-Many
+    List<String> labels = (List<String>) fields.get("labels");
+    if (labels != null) {
+        Set<Skill> taskSkills = labels.stream()
+            .map(label -> skillRepository.findByNameIgnoreCase(label)
+                .orElseGet(() -> {
+                    Skill newSkill = new Skill();
+                    newSkill.setName(label);
+                    newSkill.setCategory("Jira Import");
+                    return skillRepository.save(newSkill);
+                }))
+            .collect(Collectors.toSet());
+        task.setSkills(taskSkills);
     }
 }
 }

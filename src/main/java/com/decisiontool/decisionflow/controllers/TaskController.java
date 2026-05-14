@@ -81,7 +81,7 @@ public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
         return ResponseEntity.ok("Синхронизация успешно завершена");
     }
 
-    @GetMapping("/import/{issueKey}")
+    @PostMapping("/import/{issueKey}")
     public ResponseEntity<Task> importFromJira(@PathVariable String issueKey) {
         Map<String, Object> jiraData = jiraService.getIssue(issueKey);
         

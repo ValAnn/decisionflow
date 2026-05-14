@@ -11,6 +11,6 @@ public interface DeveloperSkillRepository extends JpaRepository<DeveloperSkill, 
     
     // Самый важный метод: найти разработчиков, знающих конкретный скилл, 
     // и отсортировать их по уровню владения (от профи к новичкам)
-    @Query("SELECT ds FROM DeveloperSkill ds WHERE ds.skill.id = :skillId ORDER BY ds.proficiencyLevel DESC")
-    List<DeveloperSkill> findTopExpertsForSkill(Long skillId);
+    // @Query("SELECT ds FROM DeveloperSkill ds WHERE ds.skill.id = :skillId ORDER BY ds.proficiencyLevel DESC")
+    // List<DeveloperSkill> findTopExpertsForSkill(Long skillId);
 }

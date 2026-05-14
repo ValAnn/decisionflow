@@ -13,13 +13,12 @@ public class DeveloperSkill {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "developer_id")
-    private User developer;
+    @JoinColumn(name = "profile_id")
+    private DeveloperProfile profile;
 
     @ManyToOne
     @JoinColumn(name = "skill_id")
     private Skill skill;
 
-    @Column(name = "proficiency_level")
-    private Integer proficiencyLevel; // Оценка от 1 до 10
+    private boolean isPrimary;
 }

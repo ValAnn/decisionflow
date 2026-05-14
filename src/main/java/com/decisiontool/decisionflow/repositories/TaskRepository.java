@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
@@ -19,7 +20,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // Список задач по статусу (например, "TODO" или "IN_PROGRESS")
     List<Task> findAllByStatus(String status);
 
-    List<Task> findByExternalJiraId(String jira_id);
+    Optional<Task> findByExternalJiraId(String jira_id);
 
     // 1. Активные задачи (те, что в процессе И еще не завершены)
     @Query("SELECT COUNT(t) FROM Task t WHERE t.assignee.id = :devId " +

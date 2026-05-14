@@ -26,10 +26,10 @@ public class MatchingService {
     public double calculateMatch(DeveloperProfile profile, Task task) {
         // 1. Специализация (60%)
         double specScore = 0;
-        if (profile.getSpecialization() != null && 
-            profile.getSpecialization().getName().equals(task.getRequiredSpecialization())) {
-            specScore = 1.0;
-        }
+        // if (profile.getSpecialization() != null && 
+        //     profile.getSpecialization().getName().equals(task.getRequiredSpecialization())) {
+        //     specScore = 1.0;
+        // }
 
         // 2. Свободные часы (20%)
         LocalDateTime now = LocalDateTime.now();

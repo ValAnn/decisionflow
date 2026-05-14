@@ -5,8 +5,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "tasks")
@@ -67,4 +70,13 @@ public class Task {
     @Column(name = "deadline_at")
     // @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDateTime deadlineAt;
+
+    @ManyToMany
+    @JoinTable(
+    name = "task_skills",
+    joinColumns = @JoinColumn(name = "task_id"),
+    inverseJoinColumns = @JoinColumn(name = "skill_id")
+    )
+    @JsonManagedReference
+    private Set<Skill> skills = new HashSet<>();
 }

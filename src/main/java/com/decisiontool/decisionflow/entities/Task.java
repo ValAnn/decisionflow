@@ -49,8 +49,9 @@ public class Task {
     private User assignee; // Разработчик, которого назначит аналитик
 
     // Ссылка на департамент (создадим сущность Department позже или используем String)
-    @Column(name = "department_id")
-    private Long departmentId;
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
 
     @Column(name = "created_at")
     // @JsonFormat(pattern = "yyyy-MM-dd")

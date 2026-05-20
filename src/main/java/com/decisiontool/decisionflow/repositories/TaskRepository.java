@@ -19,6 +19,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findAllByAssigneeId(Long assigneeId);
     // Список задач по статусу (например, "TODO" или "IN_PROGRESS")
     List<Task> findAllByStatus(String status);
+    List<Task> findByStatus(String status);
 
     Optional<Task> findByExternalJiraId(String jira_id);
 
@@ -58,7 +59,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT CASE WHEN COUNT(t) = 0 THEN 0.0 ELSE " +
        "(SUM(CASE WHEN t.status = 'DONE' THEN 1.0 ELSE 0.0 END) * 100.0 / COUNT(t)) END " +
-       "FROM Task t WHERE t.departmentId = :deptId AND t.assignee.id = :userId")
+       "FROM Task t WHERE t.department.id = :deptId AND t.assignee.id = :userId")
 Double getCompletionPercentage(@Param("deptId") Long deptId, @Param("userId") Long userId);
 
     @Query("SELECT SUM(t.spentHours) FROM Task t " +

@@ -1,5 +1,6 @@
 package com.decisiontool.decisionflow.controllers;
 
+import com.decisiontool.decisionflow.dtos.TaskCreateDto;
 import com.decisiontool.decisionflow.entities.Task;
 import com.decisiontool.decisionflow.services.JiraIntegrationService;
 import com.decisiontool.decisionflow.services.TaskService;
@@ -82,20 +83,9 @@ public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
     }
 
     @PostMapping("/import/{issueKey}")
-    public ResponseEntity<Task> importFromJira(@PathVariable String issueKey) {
-        Map<String, Object> jiraData = jiraService.getIssue(issueKey);
-        
-        Task newTask = new Task();
-        newTask.setExternalJiraId(issueKey);
-        
-        // Извлекаем заголовок и описание (структура Jira API v3)
-        Map<String, Object> fields = (Map<String, Object>) jiraData.get("fields");
-        newTask.setTitle((String) fields.get("summary"));
-        
-        // Для простоты берем описание как строку (в жизни там ADF JSON)
-        newTask.setDescription("Импортировано из Jira. Требуется ТЗ.");
-        
-        return ResponseEntity.ok(newTask);
+    public ResponseEntity<Task> importFromJira(@PathVariable Long issueKey) {
+        Task importedTask = taskService.syncSingleTaskWithJira(issueKey); 
+        return ResponseEntity.ok(importedTask);
     }
 
     
@@ -107,6 +97,12 @@ public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
         
         taskService.completeTaskAnalysis(id, developerId);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody TaskCreateDto dto) {
+        Task updatedTask = taskService.updateExistingTask(id, dto);
+        return ResponseEntity.ok(updatedTask);
     }
 }
     

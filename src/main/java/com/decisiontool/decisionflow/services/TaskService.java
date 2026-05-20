@@ -1,8 +1,12 @@
 package com.decisiontool.decisionflow.services;
 
+import com.decisiontool.decisionflow.dtos.TaskCreateDto;
+import com.decisiontool.decisionflow.entities.Department;
+import com.decisiontool.decisionflow.entities.DeveloperProfile;
 import com.decisiontool.decisionflow.entities.Skill;
 import com.decisiontool.decisionflow.entities.Task;
 import com.decisiontool.decisionflow.entities.User;
+import com.decisiontool.decisionflow.repositories.DepartmentRepository;
 import com.decisiontool.decisionflow.repositories.SkillRepository;
 import com.decisiontool.decisionflow.repositories.TaskRepository;
 import com.decisiontool.decisionflow.repositories.UserRepository;
@@ -15,8 +19,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +34,7 @@ import java.util.stream.Collectors;
 public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
     private final MatchingService matchingService;
     private final JiraIntegrationService jiraIntegrationService;
 
@@ -57,7 +64,7 @@ public class TaskService {
                 .orElseThrow(() -> new EntityNotFoundException("Задача не найдена"));
 
         // 2. Бизнес-проверка: может ли этот юзер менять статус?
-        boolean isOwner = task.getAssignee().getUsername().equals(username);
+        boolean isOwner = task.getAnalyst().getUsername().equals(username);
         //boolean isLead = task.getLead() != null && task.getLead().getUsername().equals(username);
 
         if (!isOwner) {
@@ -69,17 +76,28 @@ public class TaskService {
 
         // 4. Обновление
         task.setStatus(newStatus);
+
+        if (task.getExternalJiraId() != null && !task.getExternalJiraId().isBlank()) {
+            try {
+                // Вызываем метод из твоего JiraIntegrationService
+                jiraIntegrationService.updateIssueStatus(task.getExternalJiraId(), newStatus);
+                
+            } catch (Exception e) {
+                // Логируем ошибку, чтобы из-за упавшей Jira не ломалась локальная база данных
+                // log.error("Локальный статус изменен, но не удалось обновить статус в Jira для задачи {}", task.getExternalJiraId(), e);
+            }
+        }
         
         // Если задача перешла в DONE, можно зафиксировать время завершения
         if ("DONE".equals(newStatus)) {
-            // task.setCompletedAt(LocalDateTime.now()); 
+             task.setCompletedAt(LocalDateTime.now()); 
         }
 
         return taskRepository.save(task);
     }
 
     private void validateStatus(String status) {
-        List<String> validStatuses = Arrays.asList("TODO", "IN_PROGRESS", "DONE");
+        List<String> validStatuses = Arrays.asList("СОЗДАНО", "ИССЛЕДОВАНИЕ", "К ВЫПОЛНЕНИЮ");
         if (!validStatuses.contains(status)) {
             throw new IllegalArgumentException("Некорректный статус: " + status);
         }
@@ -149,11 +167,11 @@ public Task syncSingleTaskWithJira(Long taskId) {
             .orElseThrow(() -> new EntityNotFoundException("Задача не найдена"));
 
     // // Получаем данные из Jira по ключу (например, KAN-1)
-    // Map<String, Object> response = jiraIntegrationService.getIssueByKey(task.getExternalJiraId());
-    // Map<String, Object> fields = (Map<String, Object>) response.get("fields");
+    Map<String, Object> response = jiraIntegrationService.getIssue(task.getExternalJiraId());
+    Map<String, Object> fields = (Map<String, Object>) response.get("fields");
 
     // // Используем ТОТ ЖЕ самый метод маппинга
-    // mapJiraFieldsToTask(task, fields);
+    mapJiraFieldsToTask(task, fields);
 
     return taskRepository.save(task);
 }
@@ -173,11 +191,9 @@ private String parseJiraDescription(Object descriptionObj) {
 
         StringBuilder fullText = new StringBuilder();
         
-        // Проходим по параграфам
         for (Map<String, Object> paragraph : content) {
             List<Map<String, Object>> innerContent = (List<Map<String, Object>>) paragraph.get("content");
             if (innerContent != null) {
-                // Собираем текст из каждого элемента параграфа
                 for (Map<String, Object> textElement : innerContent) {
                     if ("text".equals(textElement.get("type"))) {
                         fullText.append((String) textElement.get("text"));
@@ -204,8 +220,30 @@ private void mapJiraFieldsToTask(Task task, Map<String, Object> fields) {
         task.setStatus(((String) statusMap.get("name")).toUpperCase());
     }
 
+    //Приоритет
+    Map<String, Object> priority = (Map<String, Object>) fields.get("priority");
+    if (priority != null) {
+        task.setPriority(((String) priority.get("name")).toUpperCase());
+    }
+
+    String duedateStr = (String) fields.get("duedate"); // В Jira это просто строка
+    if (duedateStr != null && !duedateStr.isEmpty()) {
+        // Парсим строку "2026-05-30" в LocalDate
+        LocalDate date = LocalDate.parse(duedateStr);
+        
+        // Если твое поле в Task — LocalDateTime, добавляем начало дня
+        task.setDeadlineAt(date.atStartOfDay()); 
+    }
+
     // 3. Департамент и Специализация (наши кастомные поля)
-    Map<String, Object> dept = (Map<String, Object>) fields.get("customfield_10072");
+    Map<String, Object> departament = (Map<String, Object>) fields.get("customfield_10072");
+    if (departament != null) {
+        // Здесь можно либо сетить строку, либо искать в таблице departments
+        // Для простоты пока предположим, что в Task есть строковое поле
+        task.setDepartment(departmentRepository.findByName((String) departament.get("value")));
+    }
+
+    Map<String, Object> dept = (Map<String, Object>) fields.get("customfield_10073");
     if (dept != null) {
         // Здесь можно либо сетить строку, либо искать в таблице departments
         // Для простоты пока предположим, что в Task есть строковое поле
@@ -227,4 +265,83 @@ private void mapJiraFieldsToTask(Task task, Map<String, Object> fields) {
         task.setSkills(taskSkills);
     }
 }
+public Task updateExistingTask(Long id, TaskCreateDto dto) {
+        //log.info("Обновление задачи с ID: {}", id);
+
+        // 1. Ищем существующую задачу в БД
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Задача не найдена с ID: " + id));
+
+        // 2. Обновляем простые текстовые поля
+        task.setTitle(dto.getTitle());
+        task.setDescription(dto.getDescription());
+        task.setPriority(dto.getPriority());
+        task.setRequiredSpecialization(dto.getRequiredSpecialization());
+        task.setUpdatedAt(LocalDateTime.now());
+
+        if (dto.getDeadlineAt() != null) {
+            task.setDeadlineAt(LocalDateTime.parse(dto.getDeadlineAt()));
+        }
+
+        // 3. Обновляем департамент
+        if (dto.getDepartmentId() != null) {
+            Department dept = departmentRepository.findById(dto.getDepartmentId())
+                    .orElseThrow(() -> new RuntimeException("Департамент не найден"));
+            task.setDepartment(dept);
+        }
+
+        // 4. Обновляем разработчика (исполнителя, которого подобрала СППР)
+        if (dto.getDeveloper() != null && dto.getDeveloper().getId() != null) {
+            User dev = userRepository.findById(dto.getDeveloper().getId())
+                    .orElseThrow(() -> new RuntimeException("Разработчик не найден"));
+            task.setAssignee(dev);
+        } else {
+            task.setAssignee(null); // Если исполнителя сняли
+        }
+
+        // 5. Обновляем навыки задачи (skills)
+        if (dto.getSkills() != null) {
+    java.util.Set<Skill> updatedSkills = dto.getSkills().stream()
+            .map(skillDto -> {
+                if (skillDto.getId() != null) {
+                    return skillRepository.findById(skillDto.getId())
+                            .orElseThrow(() -> new RuntimeException("Навык не найден"));
+                } else {
+                    Skill newSkill = new Skill();
+                    newSkill.setName(skillDto.getName());
+                    return skillRepository.save(newSkill);
+                }
+            })
+            .collect(java.util.stream.Collectors.toSet()); // <-- Вот этот фикс!
+
+    task.setSkills(updatedSkills); 
+        }// Теперь типы идеально совпадают
+
+    List<String> skillNames = dto.getSkills() != null ? 
+    dto.getSkills().stream().map(s -> s.getName().replaceAll("\\s+", "_")).toList() : // Метки в Jira не любят пробелы
+    Collections.emptyList();
+
+    String devJiraId = (task.getAssignee() != null) ? task.getAssignee().getJiraAccountId() : null;
+
+        // 6. СИНХРОНИЗАЦИЯ С JIRA: Обновляем данные в существующем тикете Jira
+        if (task.getExternalJiraId() != null && !task.getExternalJiraId().contains("ERROR")) {
+            try {
+                // Отправляем обновленное название и описание по ключу таски (например, KAN-6)
+                jiraIntegrationService.updateIssue(
+                    task.getExternalJiraId(),         // Ключ таски (например, "KAN-1")
+                    dto.getTitle(),           // Новое название
+                    dto.getDescription(),     // Новое описание
+                    dto.getPriority(),        // Приоритет
+                    skillNames,               // Навыки (skills) как метки
+                    devJiraId                 // Jira account ID назначенного разработчика
+                );
+                //log.info("Задача успешно обновлена в Jira по ключу: {}", task.getJiraId());
+            } catch (Exception e) {
+                //log.error("Не удалось обновить данные в Jira для задачи {}", task.getJiraId(), e);
+            }
+        }
+
+        // 7. Сохраняем обновленную сущность в локальную базу данных
+        return taskRepository.save(task);
+    }
 }

@@ -18,9 +18,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MatchingService {
 
-    @Autowired
-    private TaskRepository taskRepository;
-    private DeveloperRepository developerRepository;
+    
+    private final TaskRepository taskRepository;
+    private final DeveloperRepository developerRepository;
 
 
     public double calculateMatch(DeveloperProfile profile, Task task) {
@@ -40,12 +40,17 @@ public class MatchingService {
         double loadScore = Math.max(0, (80.0 - busyHours) / 80.0);
 
         // 3. Грейд (10%)
-        double gradeScore = switch (profile.getGrade().toUpperCase()) {
-            case "SENIOR" -> 1.0;
-            case "MIDDLE" -> 0.7;
-            case "JUNIOR" -> 0.4;
-            default -> 0.5;
-        };
+        String grade = profile.getGrade();
+        double gradeScore = 0; // Дефолтное значение, если грейд null или неизвестен
+        
+        if (grade != null) {
+            gradeScore = switch (grade.trim().toUpperCase()) {
+                case "SENIOR" -> 1.0;
+                case "MIDDLE" -> 0.7;
+                case "JUNIOR" -> 0.4;
+                default -> 0.5;
+            };
+        }
 
         // 4. Дополнительные теги (10%)
         double tagsScore = 0.5; 

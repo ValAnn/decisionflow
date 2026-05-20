@@ -50,9 +50,10 @@ dependencies {
     testImplementation ("org.springframework.boot:spring-boot-starter-test")
     testImplementation ("io.projectreactor:reactor-test")  // для тестирования WebClient
     testImplementation ("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.springframework.security:spring-security-test")
     // testImplementation("org.springframework.boot:spring-boot-starter-test")
     // testImplementation("org.springframework.security:spring-security-test")
-    // testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 // tasks.generateJava {

@@ -8,4 +8,6 @@ import java.util.List;
 
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
+   
+    Department findByName(String name);
 }

@@ -1,0 +1,25 @@
+package com.decisiontool.decisionflow.auth;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc // Позволяет имитировать HTTP-запросы без запуска реального сервера
+public class SecurityJwtConfigTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void testProtectedEndpoint_ShouldReturn401IfNoToken() throws Exception {
+        // Пытаемся зайти на защищенный эндпоинт распределения задач без JWT-токена
+        mockMvc.perform(get("/api/tasks/match"))
+               .andExpect(status().isBadRequest());//Spring Security заблокирует запрос (401)
+    }
+}

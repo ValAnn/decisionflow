@@ -89,7 +89,7 @@ public class TaskService {
         }
         
         // Если задача перешла в DONE, можно зафиксировать время завершения
-        if ("DONE".equals(newStatus)) {
+        if ("DONE".equalsIgnoreCase(newStatus)) {
              task.setCompletedAt(LocalDateTime.now()); 
         }
 

@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "cypress": "^15.15.0"
+  },
+  "dependencies": {
+    "cloc": "^2.6.0-cloc"
   }
 }

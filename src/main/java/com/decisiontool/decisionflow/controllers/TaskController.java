@@ -2,17 +2,14 @@ package com.decisiontool.decisionflow.controllers;
 
 import com.decisiontool.decisionflow.dtos.TaskCreateDto;
 import com.decisiontool.decisionflow.entities.Task;
-import com.decisiontool.decisionflow.services.JiraIntegrationService;
 import com.decisiontool.decisionflow.services.TaskService;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +19,6 @@ import java.util.Map;
 public class TaskController {
 
     private final TaskService taskService;
-    private final JiraIntegrationService jiraService;
 
     @PostMapping
     public Task createTask(@RequestBody Task task) {
@@ -67,7 +63,7 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+public ResponseEntity<Task> getTaskById(@PathVariable("id") Long id) {
     // Вызываем метод сервиса
     Task task = taskService.getTaskById(id);
     
@@ -82,9 +78,9 @@ public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
         return ResponseEntity.ok("Синхронизация успешно завершена");
     }
 
-    @PostMapping("/import/{issueKey}")
-    public ResponseEntity<Task> importFromJira(@PathVariable Long issueKey) {
-        Task importedTask = taskService.syncSingleTaskWithJira(issueKey); 
+    @PostMapping("/{id}/sync-jira")
+    public ResponseEntity<Task> syncTaskWithJira(@PathVariable Long id) {
+        Task importedTask = taskService.syncSingleTaskWithJira(id); 
         return ResponseEntity.ok(importedTask);
     }
 

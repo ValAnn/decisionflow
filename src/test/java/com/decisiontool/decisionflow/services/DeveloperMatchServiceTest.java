@@ -117,7 +117,7 @@ class DeveloperMatchServiceTest {
     @DisplayName("Проверка генерации исключения при передаче null")
     void testCalculateMatchScore_ThrowsExceptionOnNull() {
         // Проверяем, что твой сервис правильно реагирует на некорректные входные данные
-        assertThrows(NullPointerException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             developerMatchService.calculateMatch(null, null);
         }, "Если переданы null-объекты, должно выбрасываться исключение IllegalArgumentException");
     }

@@ -1,11 +1,8 @@
 package com.decisiontool.decisionflow.dtos;
-
 import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-
 @Data
 @Builder
 @AllArgsConstructor
@@ -16,7 +13,6 @@ public class DashboardOverviewDTO {
     private MetricDTO overdueTasks;
     private RisksDTO risks;
     private PriorityDistributionDTO priorities;
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -24,7 +20,6 @@ public class DashboardOverviewDTO {
         private long value;
         private double changePercent;
     }
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -32,7 +27,6 @@ public class DashboardOverviewDTO {
         private long overdue;
         private long dueSoon;
     }
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -43,7 +37,6 @@ public class DashboardOverviewDTO {
         private long other;
         private List<CriticalTaskDTO> criticalTasks;
     }
-
     @Data
     @Builder
     @AllArgsConstructor

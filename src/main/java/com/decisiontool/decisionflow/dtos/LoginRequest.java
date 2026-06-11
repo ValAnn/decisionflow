@@ -1,7 +1,5 @@
 package com.decisiontool.decisionflow.dtos;
-
 import lombok.Data;
-
 @Data
 public class LoginRequest {
     private String username;

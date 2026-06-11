@@ -1,8 +1,6 @@
 package com.decisiontool.decisionflow.dtos;
-
 import lombok.Data;
 import java.util.List;
-
 @Data
 public class TaskCreateDto {
     private String title;
@@ -13,13 +11,11 @@ public class TaskCreateDto {
     private Long departmentId;
     private String deadlineAt;
     private DeveloperRef developer;
-    private List<SkillDto> skills; // Переименовали в skills
-
+    private List<SkillDto> skills;
     @Data
     public static class DeveloperRef {
         private Long id;
     }
-
     @Data
     public static class SkillDto {
         private Long id;

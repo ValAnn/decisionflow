@@ -1,5 +1,4 @@
 package com.decisiontool.decisionflow.services;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,41 +11,30 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
-
 import org.springframework.stereotype.Service;
-
 import com.decisiontool.decisionflow.dtos.DashboardOverviewDTO;
 import com.decisiontool.decisionflow.dtos.WorkloadPointDTO;
 import com.decisiontool.decisionflow.entities.Task;
 import com.decisiontool.decisionflow.repositories.TaskRepository;
-
 import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
-
     private static final Set<String> IN_PROGRESS_STATUSES = Set.of(
         "RESEARCH", "ИССЛЕДОВАНИЕ"
     );
-
     private static final Set<String> DONE_STATUSES = Set.of(
         "TO_DO"
     );
-
     private static final Set<String> TODO_STATUSES = Set.of(
         "СОЗДАНО", "CREATED"
     );
-
     private final TaskRepository taskRepository;
-
     public DashboardOverviewDTO getOverview(String username) {
         LocalDateTime now = LocalDateTime.now();
         List<Task> tasks = taskRepository.findAllByAnalystUsername(username);
-
         LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
         LocalDate prevMonthStart = monthStart.minusMonths(1);
-
         DashboardOverviewDTO.MetricDTO totalTasks = buildMetric(
             tasks,
             t -> true,
@@ -71,15 +59,12 @@ public class DashboardService {
             monthStart,
             prevMonthStart
         );
-
         long overdueCount = tasks.stream().filter(t -> isOverdue(t, now)).count();
         long dueSoonCount = tasks.stream().filter(t -> isDueSoon(t, now)).count();
-
         long high = tasks.stream().filter(t -> "HIGH".equals(normalizePriority(t.getPriority()))).count();
         long medium = tasks.stream().filter(t -> "MEDIUM".equals(normalizePriority(t.getPriority()))).count();
         long low = tasks.stream().filter(t -> "LOW".equals(normalizePriority(t.getPriority()))).count();
         long other = tasks.size() - high - medium - low;
-
         List<DashboardOverviewDTO.CriticalTaskDTO> criticalTasks = tasks.stream()
             .filter(t -> "HIGH".equals(normalizePriority(t.getPriority())))
             .filter(t -> !DONE_STATUSES.contains(normalizeStatus(t.getStatus())))
@@ -93,7 +78,6 @@ public class DashboardService {
                 .deadlineAt(t.getDeadlineAt() != null ? t.getDeadlineAt().toString() : null)
                 .build())
             .toList();
-
         return DashboardOverviewDTO.builder()
             .totalTasks(totalTasks)
             .inProgressTasks(inProgress)
@@ -112,13 +96,11 @@ public class DashboardService {
                 .build())
             .build();
     }
-
     public List<WorkloadPointDTO> getWorkload(String username, String period) {
         List<Task> tasks = taskRepository.findAllByAnalystUsername(username);
         String normalizedPeriod = period == null ? "week" : period.trim().toLowerCase(Locale.ROOT);
         return "month".equals(normalizedPeriod) ? buildMonthSeries(tasks) : buildWeekSeries(tasks);
     }
-
     private List<WorkloadPointDTO> buildWeekSeries(List<Task> tasks) {
         Map<DayOfWeek, Long> counts = new HashMap<>();
         LocalDate today = LocalDate.now();
@@ -132,7 +114,6 @@ public class DashboardService {
                 counts.put(day.getDayOfWeek(), counts.getOrDefault(day.getDayOfWeek(), 0L) + 1);
             }
         }
-
         List<WorkloadPointDTO> result = new ArrayList<>();
         DayOfWeek weekStart = start.getDayOfWeek();
         for (int i = 0; i < 7; i++) {
@@ -142,7 +123,6 @@ public class DashboardService {
         }
         return result;
     }
-
     private List<WorkloadPointDTO> buildMonthSeries(List<Task> tasks) {
         Map<Integer, Long> counts = new HashMap<>();
         LocalDate now = LocalDate.now();
@@ -156,7 +136,6 @@ public class DashboardService {
                 counts.put(day.getDayOfMonth(), counts.getOrDefault(day.getDayOfMonth(), 0L) + 1);
             }
         }
-
         List<WorkloadPointDTO> result = new ArrayList<>();
         for (int i = 0; i < 30; i++) {
             LocalDate day = start.plusDays(i);
@@ -167,7 +146,6 @@ public class DashboardService {
         }
         return result;
     }
-
     private DashboardOverviewDTO.MetricDTO buildMetric(
         List<Task> tasks,
         Predicate<Task> filter,
@@ -175,13 +153,11 @@ public class DashboardService {
         LocalDate prevStart
     ) {
         long total = tasks.stream().filter(filter).count();
-
         long current = tasks.stream()
             .filter(filter)
             .filter(t -> t.getCreatedAt() != null)
             .filter(t -> !t.getCreatedAt().toLocalDate().isBefore(currentStart))
             .count();
-
         long previous = tasks.stream()
             .filter(filter)
             .filter(t -> t.getCreatedAt() != null)
@@ -190,33 +166,28 @@ public class DashboardService {
                 return !date.isBefore(prevStart) && date.isBefore(currentStart);
             })
             .count();
-
         return DashboardOverviewDTO.MetricDTO.builder()
             .value(total)
             .changePercent(calculatePercentChange(current, previous))
             .build();
     }
-
     private double calculatePercentChange(long current, long previous) {
         if (previous == 0) {
             return current > 0 ? 100.0 : 0.0;
         }
         return Math.round(((current - previous) * 1000.0 / previous)) / 10.0;
     }
-
     private boolean isOverdue(Task task, LocalDateTime now) {
         return task.getDeadlineAt() != null
             && task.getDeadlineAt().isBefore(now)
             && !DONE_STATUSES.contains(normalizeStatus(task.getStatus()));
     }
-
     private boolean isDueSoon(Task task, LocalDateTime now) {
         return task.getDeadlineAt() != null
             && (task.getDeadlineAt().isEqual(now) || task.getDeadlineAt().isAfter(now))
             && task.getDeadlineAt().isBefore(now.plusDays(7))
             && !DONE_STATUSES.contains(normalizeStatus(task.getStatus()));
     }
-
     private String normalizeStatus(String status) {
         if (status == null) {
             return "";
@@ -233,7 +204,6 @@ public class DashboardService {
         }
         return normalized;
     }
-
     private String normalizePriority(String priority) {
         if (priority == null) {
             return "OTHER";
